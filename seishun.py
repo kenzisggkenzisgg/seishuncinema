@@ -1,5 +1,5 @@
-import streamlit as st # フロントエンドを扱うstreamlitの機能をインポート
-from openai import OpenAI # openAIのchatGPTのAIを活用するための機能をインポート
+import streamlit as st
+from openai import OpenAI
 import difflib
 import requests
 import gspread
@@ -7,41 +7,70 @@ from google.oauth2.service_account import Credentials
 from datetime import date
 import pandas as pd
 import time
+import os
 
-
-# アクセスの為のキーをos.environ["OPENAI_API_KEY"]に代入し、設定
-
-import os # OSが持つ環境変数OPENAI_API_KEYにAPIを入力するためにosにアクセスするためのライブラリをインポート
-
+# CSS for responsive design
 page_style = '''
 <style>
+/* 全体のレイアウト調整 */
 .stApp {
     background-color: #e6ffff;
     color: #2f4f4f;
-}
-.custom-subtitle {
-        color: green; /* 文字色を緑に変更 */
-        font-size: 20px; /* 文字サイズを20pxに変更 */
+    font-size: 16px;
+    padding: 1rem;
 }
 
-/* サイドバーの背景色を変更 */
+/* レスポンシブ調整: スマートフォン用 */
+@media screen and (max-width: 600px) {
+    .stApp {
+        font-size: 14px; /* フォントサイズを縮小 */
+    }
+    [data-testid="stSidebar"] {
+        width: 100%; /* サイドバーを画面幅に広げる */
+    }
+    [data-testid="stSidebar"] .block-container {
+        padding: 1rem; /* サイドバー内の余白を調整 */
+    }
+    .element-container {
+        margin-bottom: 1rem; /* 各要素間の余白を広げる */
+    }
+}
+
+/* サイドバーのデザイン */
 [data-testid="stSidebar"] {
     background-color: #009999;
-    color: #000000; /* サイドバーの文字色を黒に変更 */
+    color: #ffffff;
 }
 
+[data-testid="stSidebar"] .element-container {
+    padding: 0.5rem;
+}
+
+.custom-subtitle {
+    color: green;
+    font-size: 20px;
+}
+
+/* ボタンのスタイル調整 */
+button {
+    border-radius: 5px;
+    padding: 0.5rem;
+    background-color: #004d4d;
+    color: white;
+    border: none;
+}
+
+button:hover {
+    background-color: #006666;
+    color: #ffffff;
+}
 </style>
 '''
 st.markdown(page_style, unsafe_allow_html=True)
 
-##API_KEYを渡す（streamlitで動かすとき）ローカルで動かす時はこちらをコメント
+# OpenAIのAPI設定
 API_KEY = st.secrets["OPENAI_API_KEY"]
 client = OpenAI(api_key=API_KEY)
-
-##API_KEYを渡す（ローカルで動かすとき）streamlitで動かす時はこちらをコメントアウト
-#ターミナルでこれを実行　→ export OPENAI_API_KEY="sk-XXXXXXXXXXXX"
-#API_KEY = os.getenv("OPENAI_API_KEY")
-#client = OpenAI(api_key=API_KEY)
 
 # chatGPTにリクエストするためのメソッドを設定。引数には書いてほしい内容と文章のテイストと最大文字数を指定
 def run_gpt(content_text_to_gpt):
@@ -60,40 +89,33 @@ def run_gpt(content_text_to_gpt):
     output_content = response.choices[0].message.content.strip()
     return output_content # 返って来たレスポンスの内容を返す
 
-##もっちゃんコード
-#タイトル
-st.sidebar.image("thumbnail.jpg")
 
-#アプリの説明文
-st.sidebar.write('『今日映画何見る？』の提案アプリ！')
-st.sidebar.write('&nbsp;','&nbsp;','以下質問に答えてね:smile:')
+# レスポンシブ対応のレイアウト調整
+st.sidebar.image("thumbnail.jpg", use_container_width=True)
+st.sidebar.write("『今日映画何見る？』の提案アプリ！")
+st.sidebar.write("&nbsp;","&nbsp;","以下質問に答えてね:smile:")
 
-#質問たち
-option_radio = st.sidebar.radio(
-    "性別を教えて！",
-    ["男性", "女性", "その他"],
-)
+# サイドバーの質問セクション
+option_radio = st.sidebar.radio("性別を教えて！", ["男性", "女性", "その他"])
 option_selectbox = st.sidebar.selectbox(
-    "年齢を教えて！",
-    ("10代以下", "10代", "20代", "30代", "40代", "50代", "60代", "70代", "80代以上"),
+    "年齢を教えて！", 
+    ("10代以下", "10代", "20代", "30代", "40代", "50代", "60代", "70代", "80代以上")
 )
 text_input1 = st.sidebar.selectbox(
     "誰と映画を見るの？",
-    ("お友達", "彼氏", "彼女" , "夫", "妻", "子ども", "両親", "好きな人"),
+    ("お友達", "彼氏", "彼女", "夫", "妻", "子ども", "両親", "好きな人", "自分ひとり")
 )
 text_input2 = st.sidebar.selectbox(
     "今の気分は？",
-    ("落ち込み気味" , "悲しい気持ち" , "不安な気持ち" ,"怒り気味" , "普通" , "楽しい気持ち" , "嬉しい気持ち" , "興奮気味", "Techモード"),
+    ("落ち込み気味", "悲しい気持ち", "不安な気持ち", "怒り気味", "普通", "楽しい気持ち", "嬉しい気持ち", "興奮気味", "Techモード")
 )
 text_area = st.sidebar.selectbox(
     "映画を見てどんな気分になりたい？",
-    ("感動したい", "温かい気持ちになりたい", "興奮したい", "恐怖に怯えたい", "熱い気持ちになりたい", "キュンキュンしたい"),
-    
+    ("感動したい", "温かい気持ちになりたい", "興奮したい", "恐怖に怯えたい", "熱い気持ちになりたい", "キュンキュンしたい")
 )
 
-#KJ追記
-# 全ての入力値をまとめて1つの変数に格納
-content_text_to_gpt =(
+# 質問に基づくリクエスト内容の生成
+content_text_to_gpt = (
     f"私は{option_selectbox}の{option_radio}です。今日は{text_input1}と映画を見ようとしています。\n"
     f"今の気分は{text_input2}です。\n"
     f"映画をみて{text_area}私に、おすすめの映画を教えてください。\n"
@@ -181,15 +203,18 @@ if st.sidebar.button('観る映画はこれ！', type="primary"):
             "include_adult": "false",
             "language": "ja",
         }
+        # APIを呼び出す(映画ID取得用)
         search_response = requests.get(search_url, params=search_params)
-        if search_response.status_code == 200 and search_response.json().get("results"):
+        if search_response.status_code == 200:
             search_data = search_response.json()
-            # 一番最初の検索結果を取得
-            movie = search_data["results"][0]
-            movie_id = movie["id"]
-            #映画名と公開日を保存(KJ追記★）
-            st.session_state.movie_title = movie["title"]  # 映画名を保存
-            st.session_state.release_date = movie.get("release_date", "N/A")  # 公開日を保存
+            # 検索結果の確認
+            if "results" not in search_data or not search_data["results"]:
+                st.title("正しいタイトルで試してみて！！")
+                st.write("例えば、スタンド・バイ・ミーのように「・」を入れてみてね。")
+                st.stop()
+                #映画名と公開日を保存(KJ追記★）
+                st.session_state.movie_title = movie["title"]  # 映画名を保存
+                st.session_state.release_date = movie.get("release_date", "N/A")  # 公開日を保存
 
 # タイトルの類似度を評価して最も近い映画を選択
             def get_title_similarity(s1, s2):
@@ -233,7 +258,7 @@ if st.sidebar.button('観る映画はこれ！', type="primary"):
                     "include_image_language": "ja",
                 }   
                 images_response = requests.get(images_url, images_params)
-                
+                full_image_url = None  # ポスターが存在しない場合に備えて、None を初期値として設定。
                 if images_response.status_code == 200:
                     images_data = images_response.json()
                     posters = images_data.get("posters", [])
