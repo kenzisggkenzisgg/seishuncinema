@@ -169,7 +169,6 @@ if st.sidebar.button('おすすめの映画を教えて！',type="primary"):
             # GPTリクエスト処理
             output_content_text = run_gpt(content_text_to_gpt)
             st.write("おすすめの映画です！")
-            st.write(output_content_text)
 
             # 映画視聴感想入力フォームを表示（KJ追記★）
             st.session_state.show_review_form = True
