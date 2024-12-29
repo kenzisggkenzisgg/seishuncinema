@@ -208,6 +208,8 @@ if st.sidebar.button('観る映画はこれ！', type="primary"):
                 # 映画タイトルを取得
                 movie_title = f"{detail_data['title']}"
                 st.session_state.movie_title = movie_title # 映画名を保存
+                st.session_state.release_date = detail_data.get("release_date", "N/A")  # 公開日を保存
+                
                 
                 # 監督情報を取得(KJ追記★）
                 credits_url = f"https://api.themoviedb.org/3/movie/{movie_id}/credits"
